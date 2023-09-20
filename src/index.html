@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>File Upload</title>
+    <style>
+      #file-container {
+        display: grid;
+      }
+      .file-item {
+        display: flex;
+        width: 50%;
+        justify-content: space-evenly;
+      }
+      .recent-file-container {
+        margin-top: 20%;
+      }
+      #form {
+        margin-top: 20%;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Available files</h2>
+    <div id="file-container"></div>
+
+    <div class="recent-file-container">
+      <h3>Recent file</h3>
+      <a id="recent-file-anchor"></a>
+    </div>
+    <form id="form">
+      <input type="text" name="file-name" id="name" />
+      <input type="file" name="file" id="files" />
+      <button type="submit">Submit</button>
+    </form>
+    <script>
+      // On submitting a file
+      function onSubmit(event) {
+        event.preventDefault();
+        const files = document.getElementById("files");
+        const formData = new FormData();
+        for (let i = 0; i < files.files.length; i++) {
+          formData.append("files", files.files[i]);
+        }
+        fetch("http://localhost:3000/files/upload", {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log(data);
+            window.location.reload();
+          });
+      }
+      const form = document.getElementById("form");
+      form.addEventListener("submit", onSubmit);
+
+      function onDeleteClick(event) {
+        fetch("http://localhost:3000/files/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ file_name: event.target.id }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            console.log(data);
+            window.location.reload();
+          });
+      }
+
+      function getMostRecent() {
+        fetch("http://localhost:3000/files/recent", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const recentAnchorTag =
+              document.getElementById("recent-file-anchor");
+            if (data.message) {
+              recentAnchorTag.innerHTML = data.message;
+            } else {
+              if (recentAnchorTag) {
+                recentAnchorTag.setAttribute("href", data.filePath);
+                recentAnchorTag.innerHTML = data.file;
+              }
+            }
+          });
+      }
+
+      function getAllFiles() {
+        fetch("http://localhost:3000/files", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            const filesContainer = document.getElementById("file-container");
+            if (data.length >= 0) {
+              data.forEach((file) => {
+                const fileItem = document.createElement("div");
+                fileItem.classList = "file-item";
+                const aEle = document.createElement("a");
+                const delButton = document.createElement("button");
+                delButton.innerHTML = "Delete";
+                delButton.setAttribute("id", file.file);
+                delButton.addEventListener("click", onDeleteClick);
+                aEle.href = file.filePath;
+                aEle.innerHTML = file.file;
+                fileItem.appendChild(aEle);
+                fileItem.appendChild(delButton);
+                filesContainer.appendChild(fileItem);
+              });
+            } else {
+              const p = document.createElement("p");
+              p.setAttribute("id", "no-files");
+              p.innerHTML = "No files in folder";
+              filesContainer.appendChild(p);
+            }
+          });
+      }
+      getMostRecent();
+      getAllFiles();
+    </script>
+  </body>
+</html>
